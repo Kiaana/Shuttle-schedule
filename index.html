@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>线路8班车时刻表</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 样式保留用于其他可能的用途 */
+    </style>
+</head>
+<body class="bg-gradient-to-br from-orange-50 to-amber-50 min-h-screen">
+    <div class="container mx-auto px-4 py-6 max-w-4xl">
+        <!-- 头部 -->
+        <div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
+            <h1 class="text-2xl md:text-3xl font-bold text-orange-600 text-center mb-2">线路8 班车时刻表</h1>
+            <p class="text-center text-gray-500 text-sm" id="currentDateTime"></p>
+        </div>
+
+        <!-- 时间选择器 -->
+        <div class="bg-white rounded-2xl shadow-lg p-5 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">选择日期</label>
+                    <select id="dateSelect" class="w-full px-4 py-2.5 border-2 border-orange-200 rounded-lg focus:outline-none focus:border-orange-400 transition">
+                        <option value="today">今天</option>
+                        <option value="tomorrow">明天</option>
+                        <option value="saturday">本周六</option>
+                        <option value="sunday">本周日</option>
+                        <option value="custom">自定义</option>
+                    </select>
+                </div>
+                <div id="customDateContainer" class="hidden">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">自定义日期</label>
+                    <input type="date" id="customDate" class="w-full px-4 py-2.5 border-2 border-orange-200 rounded-lg focus:outline-none focus:border-orange-400 transition">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">选择时间</label>
+                    <input type="time" id="timeSelect" class="w-full px-4 py-2.5 border-2 border-orange-200 rounded-lg focus:outline-none focus:border-orange-400 transition">
+                </div>
+            </div>
+            <div class="mt-4 flex gap-2">
+                <button onclick="setCurrentTime()" class="flex-1 bg-orange-500 text-white py-2.5 rounded-lg hover:bg-orange-600 transition font-medium">
+                    当前时间
+                </button>
+                <button onclick="updateSchedule()" class="flex-1 bg-amber-500 text-white py-2.5 rounded-lg hover:bg-amber-600 transition font-medium">
+                    查询班车
+                </button>
+            </div>
+        </div>
+
+        <!-- 日期类型显示 -->
+        <div id="dayTypeInfo" class="bg-gradient-to-r from-orange-100 to-amber-100 rounded-xl p-4 mb-6 text-center">
+            <span class="text-lg font-semibold text-orange-700" id="dayTypeText"></span>
+        </div>
+
+        <!-- 班车时刻表 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <!-- 三号院 → 一号院 -->
+            <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+                <div class="bg-gradient-to-r from-orange-500 to-orange-600 p-4">
+                    <h2 class="text-xl font-bold text-white text-center">三号院 → 一号院</h2>
+                </div>
+                <div id="route1Schedule" class="p-4">
+                    <!-- 动态生成 -->
+                </div>
+            </div>
+
+            <!-- 一号院 → 三号院 -->
+            <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+                <div class="bg-gradient-to-r from-amber-500 to-amber-600 p-4">
+                    <h2 class="text-xl font-bold text-white text-center">一号院 → 三号院</h2>
+                </div>
+                <div id="route2Schedule" class="p-4">
+                    <!-- 动态生成 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 备注信息 -->
+        <div class="bg-white rounded-2xl shadow-lg p-6">
+            <h3 class="text-lg font-bold text-orange-600 mb-3 flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                </svg>
+                重要提示
+            </h3>
+            <ul class="space-y-2 text-gray-700 text-sm">
+                <li class="flex items-start">
+                    <span class="text-orange-500 mr-2">•</span>
+                    <span>线路8在 <strong>17:00以后</strong> 的班次会途径科大佳园</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="text-orange-500 mr-2">•</span>
+                    <span>一号院内环线运行时间：<strong>7:30-12:30, 14:00-18:30</strong></span>
+                </li>
+                <li class="flex items-start">
+                    <span class="text-orange-500 mr-2">•</span>
+                    <span>三号院内环线运行时间：<strong>7:30-12:30, 14:00-18:30</strong></span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // 班车时刻数据
+        const scheduleData = {
+            weekday: {
+                route1: ['07:50', '09:45', '10:00', '12:00', '12:35', '13:45', '16:25', '17:05', '17:30', '17:40', '17:55', '18:25', '21:00', '21:30', '21:35', '21:55', '22:15'],
+                route2: ['07:05', '07:10', '07:20', '07:30', '09:20', '09:30', '11:25', '13:50', '14:00', '15:30', '16:25', '18:55', '21:00']
+            },
+            saturday: {
+                route1: ['07:50', '10:00', '12:00', '12:35', '16:25', '17:30', '18:25', '21:35', '22:15'],
+                route2: ['07:20', '09:30', '13:50', '15:30', '18:55']
+            },
+            sunday: {
+                route1: ['12:35', '17:30', '22:15'],
+                route2: ['07:20', '09:30', '13:50']
+            }
+        };
+
+        // 获取星期类型
+        function getDayType(date) {
+            const day = date.getDay();
+            if (day === 0) return 'sunday';
+            if (day === 6) return 'saturday';
+            return 'weekday';
+        }
+
+        // 获取星期显示文本
+        function getDayTypeName(type) {
+            const names = {
+                weekday: '工作日 (周一至周五)',
+                saturday: '周六',
+                sunday: '周日'
+            };
+            return names[type];
+        }
+
+        // 更新当前日期时间显示
+        function updateCurrentDateTime() {
+            const now = new Date();
+            const options = { 
+                year: 'numeric', 
+                month: '2-digit', 
+                day: '2-digit', 
+                hour: '2-digit', 
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false 
+            };
+            document.getElementById('currentDateTime').textContent = 
+                '当前时间：' + now.toLocaleString('zh-CN', options);
+        }
+
+        // 设置当前时间
+        function setCurrentTime() {
+            const now = new Date();
+            document.getElementById('dateSelect').value = 'today';
+            document.getElementById('customDateContainer').classList.add('hidden');
+            document.getElementById('timeSelect').value = 
+                String(now.getHours()).padStart(2, '0') + ':' + 
+                String(now.getMinutes()).padStart(2, '0');
+            updateSchedule();
+        }
+
+        // 渲染班车时刻
+        function renderSchedule(containerId, times, currentTime) {
+            const container = document.getElementById(containerId);
+            const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
+            
+            let nextBusIndex = -1;
+            let html = '<div class="grid grid-cols-3 gap-2">';
+            
+            times.forEach((time, index) => {
+                const [hour, minute] = time.split(':').map(Number);
+                const timeMinutes = hour * 60 + minute;
+                const isPast = timeMinutes < currentMinutes;
+                const isNext = nextBusIndex === -1 && timeMinutes >= currentMinutes;
+                
+                if (isNext) nextBusIndex = index;
+                
+                let className = 'py-3 px-2 rounded-lg text-center font-medium transition ';
+                
+                if (isNext) {
+                    className += 'bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-lg transform scale-105';
+                } else if (isPast) {
+                    className += 'bg-gray-100 text-gray-400';
+                } else {
+                    className += 'bg-orange-50 text-orange-700 hover:bg-orange-100';
+                }
+                
+                html += `<div class="${className}">${time}</div>`;
+            });
+            
+            html += '</div>';
+            
+            if (nextBusIndex === -1) {
+                html = '<p class="text-center text-gray-500 py-8">今日班车已结束</p>';
+            } else {
+                const nextTime = times[nextBusIndex];
+                const [hour, minute] = nextTime.split(':').map(Number);
+                const timeMinutes = hour * 60 + minute;
+                const diffMinutes = timeMinutes - currentMinutes;
+                
+                html = `
+                    <div class="mb-4 p-4 bg-gradient-to-r from-orange-50 to-amber-50 rounded-lg border-2 border-orange-200">
+                        <div class="text-center">
+                            <p class="text-sm text-gray-600 mb-1">下一班车</p>
+                            <p class="text-3xl font-bold text-orange-600">${nextTime}</p>
+                            <p class="text-sm text-orange-500 mt-1">还有 ${diffMinutes} 分钟</p>
+                        </div>
+                    </div>
+                ` + html;
+            }
+            
+            container.innerHTML = html;
+        }
+
+        // 更新时刻表
+        function updateSchedule() {
+            const dateSelect = document.getElementById('dateSelect').value;
+            const timeSelect = document.getElementById('timeSelect').value;
+            
+            let targetDate = new Date();
+            
+            if (dateSelect === 'tomorrow') {
+                targetDate.setDate(targetDate.getDate() + 1);
+            } else if (dateSelect === 'saturday') {
+                // 找到本周六
+                const currentDay = targetDate.getDay();
+                const daysUntilSaturday = (6 - currentDay + 7) % 7;
+                targetDate.setDate(targetDate.getDate() + (daysUntilSaturday || 7));
+            } else if (dateSelect === 'sunday') {
+                // 找到本周日
+                const currentDay = targetDate.getDay();
+                const daysUntilSunday = (7 - currentDay) % 7;
+                targetDate.setDate(targetDate.getDate() + (daysUntilSunday || 7));
+            } else if (dateSelect === 'custom') {
+                const customDate = document.getElementById('customDate').value;
+                if (customDate) {
+                    targetDate = new Date(customDate);
+                }
+            }
+            
+            if (timeSelect) {
+                const [hour, minute] = timeSelect.split(':');
+                targetDate.setHours(parseInt(hour), parseInt(minute), 0);
+            }
+            
+            const dayType = getDayType(targetDate);
+            const schedule = scheduleData[dayType];
+            
+            document.getElementById('dayTypeText').textContent = getDayTypeName(dayType);
+            
+            renderSchedule('route1Schedule', schedule.route1, targetDate);
+            renderSchedule('route2Schedule', schedule.route2, targetDate);
+        }
+
+        // 日期选择改变
+        document.getElementById('dateSelect').addEventListener('change', function() {
+            if (this.value === 'custom') {
+                document.getElementById('customDateContainer').classList.remove('hidden');
+            } else {
+                document.getElementById('customDateContainer').classList.add('hidden');
+            }
+            updateSchedule();
+        });
+
+        // 自定义日期改变
+        document.getElementById('customDate').addEventListener('change', updateSchedule);
+
+        // 时间选择改变
+        document.getElementById('timeSelect').addEventListener('change', updateSchedule);
+
+        // 初始化
+        setCurrentTime();
+        setInterval(updateCurrentDateTime, 1000);
+        updateCurrentDateTime();
+    </script>
+</body>
+</html>
